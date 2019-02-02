@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"smart_home/gpio"
-	"time"
 )
 
 type Application struct {
@@ -29,7 +28,7 @@ func Run() {
 			i.OnEvent(p)
 		}
 	}
-//	time.Sleep(time.Second * 10)
+	//	time.Sleep(time.Second * 10)
 }
 
 func onColdKey(pin gpio.EnPINS2BCM, value int) {
