@@ -40,7 +40,7 @@
         {
             "label": "ssh launch",
             "type": "shell",
-            "command": "plink -pw c5hCTYw+ root@192.168.1.200 '/tmp/smart_home'",
+            "command": "plink -pw c5hCTYw+ root@192.168.1.200 '/tmp/smart-home'",
             "presentation": {
                 "echo": true,
                 "reveal": "always",

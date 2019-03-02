@@ -4,16 +4,17 @@ import (
 	"fmt"
 	"os"
 	"syscall"
-	"time"
+
+	"github.com/apinchouk/smart-home/dispatcher"
 )
 
 type gpioInImplemented struct {
-	param    GpioInParam
-	fd       int
-	bcmPin   EnPINS2BCM
-	callback OnGpioEvent
-	value    int
-	ch       chan IChannelData
+	param      GpioInParam
+	fd         int
+	bcmPin     EnPINS2BCM
+	callback   IGpioEvent
+	value      int
+	dispatcher dispatcher.IDispatcher
 }
 
 func (this *gpioInImplemented) init() bool {
@@ -49,25 +50,28 @@ func (this *gpioInImplemented) init() bool {
 	}
 
 	this.fd = int(fd)
-	this.ch = make(chan IChannelData, 256)
+	//this.ch = make(chan IChannelData, 256)
 	go detected(this)
 	return true
 }
 
-func (this *gpioInImplemented) Channel() chan IChannelData {
-	return this.ch
+func (this *gpioInImplemented) OnDispatcherEvent(event dispatcher.IEventData) {
+	this.callback.OnGpioEvent(this.bcmPin, event.(int))
 }
-func (this *gpioInImplemented) OnEvent(ch IChannelData) {
-	this.callback(this.bcmPin, ch.(int))
+
+// Not implemented
+func (this *gpioInImplemented) OnDispatcherTimer(int, dispatcher.IEventData) {
+
 }
+
 func (this *gpioInImplemented) Value() int {
 	return this.value
 }
 
 func (this *gpioInImplemented) setValue(value int) {
+	fmt.Printf("gpio value=%d\n", value)
 	this.value = value
-	this.ch <- value
-	fmt.Printf("value=%d\n", value)
+	this.dispatcher.SendEvent(this, value)
 }
 
 func detected(this *gpioInImplemented) {
@@ -93,6 +97,7 @@ func detected(this *gpioInImplemented) {
 	var buf = make([]byte, 16)
 	var value int
 	timeout := -1
+
 	for {
 		nevents, e := syscall.EpollWait(epfd, events[:], timeout)
 		if e != nil {
@@ -109,6 +114,7 @@ func detected(this *gpioInImplemented) {
 			syscall.Seek(this.fd, 0, 0)
 			n, err := syscall.Read(this.fd, buf)
 			if err == nil && n > 0 {
+				//			fmt.Println("read=", buf)
 				value = int(buf[0] - '0')
 				if this.param.Invert {
 					value ^= 1
@@ -122,35 +128,4 @@ func detected(this *gpioInImplemented) {
 			}
 		}
 	}
-}
-
-func writeInFile(file string, format string, v ...interface{}) bool {
-
-	fd, err := os.Create(file)
-	if err != nil {
-		return false
-	}
-	defer fd.Close()
-
-	_, err = fmt.Fprintf(fd, fmt.Sprintf(format, v...))
-
-	if err != nil {
-		fmt.Printf("ERROR: %s\n", err)
-		return false
-	}
-	return true
-}
-func exportPin(bcmPin EnPINS2BCM) bool {
-	if writeInFile(sysFsExport, "%d", bcmPin) {
-		time.Sleep(100 * time.Millisecond)
-		return true
-	}
-
-	return false
-}
-func setPinDirection(bcmPin EnPINS2BCM, direction string) bool {
-	return writeInFile(fmt.Sprintf(sysFsDirection, bcmPin), direction)
-}
-func setPinEdge(bcmPin EnPINS2BCM, edge string) bool {
-	return writeInFile(fmt.Sprintf(sysFsEdge, bcmPin), edge)
 }

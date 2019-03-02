@@ -6,8 +6,13 @@ import (
 	"fmt"
 )
 
+var app Application
+
 func main() {
 	fmt.Println("Hello World!")
-	Run()
+	if app.init() {
+		app.run()
+	}
+
 	//gpio.Open(1)
 }

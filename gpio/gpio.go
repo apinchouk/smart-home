@@ -1,5 +1,13 @@
 package gpio
 
+import (
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/apinchouk/smart-home/dispatcher"
+)
+
 type EnPINS2BCM int
 type EnPullState int
 type EnTrigger int
@@ -11,6 +19,8 @@ const (
 	Pin10            = 15 // красный
 	Pin12            = 18 // синий
 	Pin16            = 23 // датчик потока
+	Pin40            = 21 // кнопки включения света
+	Pin3             = 2  // реле управления светом
 )
 
 //
@@ -33,6 +43,10 @@ type GpioInParam struct {
 	PullUp   EnPullState
 	JitterMs uint32
 }
+type GpioOutParam struct {
+	ActiveLow bool
+	PullUp    EnPullState
+}
 
 type IChannelData interface {
 }
@@ -41,8 +55,52 @@ type IChannelData interface {
 type IGpioIn interface {
 	init() bool
 	Value() int
-	Channel() chan IChannelData
-	OnEvent(ch IChannelData)
+}
+type IGpioOut interface {
+	init() bool
+	Value() int
+	SetValue(value int)
+}
+
+func writeInFile(file string, format string, v ...interface{}) bool {
+
+	fd, err := os.Create(file)
+	if err != nil {
+		return false
+	}
+	defer fd.Close()
+
+	_, err = fmt.Fprintf(fd, fmt.Sprintf(format, v...))
+
+	if err != nil {
+		fmt.Printf("ERROR: %s\n", err)
+		return false
+	} else {
+		//	fmt.Printf("write in %s=%v\n", file, fmt.Sprintf(format, v...))
+	}
+
+	return true
+}
+
+func exportPin(bcmPin EnPINS2BCM) bool {
+	if writeInFile(sysFsExport, "%d", bcmPin) {
+		time.Sleep(100 * time.Millisecond)
+		return true
+	}
+
+	return false
+}
+func setPinDirection(bcmPin EnPINS2BCM, direction string) bool {
+	return writeInFile(fmt.Sprintf(sysFsDirection, bcmPin), direction)
+}
+func setPinEdge(bcmPin EnPINS2BCM, edge string) bool {
+	return writeInFile(fmt.Sprintf(sysFsEdge, bcmPin), edge)
+}
+func setPinValue(bcmPin EnPINS2BCM, value string) bool {
+	return writeInFile(fmt.Sprintf(sysFsValue, bcmPin), value)
+}
+func setPinActiveLow(bcmPin EnPINS2BCM, value string) bool {
+	return writeInFile(fmt.Sprintf(sysFsActiveLow, bcmPin), value)
 }
 
 const (
@@ -50,14 +108,24 @@ const (
 	sysFsUnexport  string = "/sys/class/gpio/unexport"
 	sysFsDirection string = "/sys/class/gpio/gpio%d/direction"
 	sysFsValue     string = "/sys/class/gpio/gpio%d/value"
+	sysFsActiveLow string = "/sys/class/gpio/gpio%d/active_low"
 	sysFsEdge      string = "/sys/class/gpio/gpio%d/edge"
 )
 
-type OnGpioEvent func(EnPINS2BCM, int)
+type IGpioEvent interface {
+	OnGpioEvent(pin EnPINS2BCM, value int)
+}
 
 //getGpioIn
-func GetGpioIn(pin EnPINS2BCM, callback OnGpioEvent, param GpioInParam) IGpioIn {
-	gpio := gpioInImplemented{bcmPin: pin, param: param, callback: callback}
+func GetGpioIn(dispatcher dispatcher.IDispatcher, pin EnPINS2BCM, callback IGpioEvent, param GpioInParam) IGpioIn {
+	gpio := gpioInImplemented{dispatcher: dispatcher, bcmPin: pin, param: param, callback: callback}
+
+	gpio.init()
+	return &gpio
+}
+
+func GetGpioOut(pin EnPINS2BCM, param GpioOutParam) IGpioOut {
+	gpio := gpioOutImplemented{bcmPin: pin, param: param}
 
 	gpio.init()
 	return &gpio

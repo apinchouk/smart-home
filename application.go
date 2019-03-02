@@ -2,35 +2,45 @@ package main
 
 import (
 	"fmt"
-	"smart_home/gpio"
+
+	"github.com/apinchouk/smart-home/dispatcher"
+	"github.com/apinchouk/smart-home/gpio"
 )
 
+type IApplication interface {
+	init() bool
+	run()
+}
 type Application struct {
-	gpioKey gpio.IGpioIn
+	dispatcher dispatcher.IDispatcher
+	stairWay   StairWayLed
 }
 
-func init() {
+func (this *Application) init() bool {
+
 	fmt.Printf("init\n")
-}
-func Run() {
-	param := gpio.GpioInParam{
-		Trigger:  gpio.TrigFalling,
-		PullUp:   gpio.PullUpOff,
-		Invert:   false,
-		JitterMs: 0,
+	this.dispatcher = dispatcher.GetDispatcher()
+
+	relay := gpio.GpioOutParam{
+		PullUp:    gpio.PullUpOff,
+		ActiveLow: true,
 	}
 
-	i := gpio.GetGpioIn(gpio.Pin16, onColdKey, param)
-
-	for {
-		select {
-		case p := <-i.Channel():
-			i.OnEvent(p)
-		}
+	button := gpio.GpioInParam{
+		Trigger:  gpio.TrigBoth,
+		PullUp:   gpio.PullUpOn,
+		Invert:   true,
+		JitterMs: 100,
 	}
-	//	time.Sleep(time.Second * 10)
+
+	this.stairWay = StairWayLed{dispatcher: this.dispatcher}
+	this.stairWay.gpioButtonLed = gpio.GetGpioIn(app.dispatcher, gpio.Pin40, &this.stairWay, button)
+	this.stairWay.gpioControlLed = gpio.GetGpioOut(gpio.Pin3, relay)
+	this.stairWay.Init()
+	return true
 }
 
-func onColdKey(pin gpio.EnPINS2BCM, value int) {
-	fmt.Printf("coldKey=%d\n", value)
+func (this *Application) run() {
+
+	this.dispatcher.Run()
 }
