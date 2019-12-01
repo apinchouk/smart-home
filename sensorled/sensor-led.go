@@ -36,7 +36,7 @@ type SensorLed struct {
 func isNight() bool {
 	t:=time.Now()
 	sunset,_:=time.Parse("15:04:05", "17:00:00")
-	sunrise,_:=time.Parse("15:04:05", "06:00:00")
+	sunrise,_:=time.Parse("15:04:05", "08:00:00")
 	//fmt.Println("Time:", t.Format("15:04:05")) // Sunset: 18:14:27
 /*
 	p := sunrisesunset.Parameters{
@@ -116,10 +116,12 @@ func (this *SensorLed) onLedTemporatyEnable(event ledEvent, data dispatcher.IEve
 		fmt.Println("TemporaryEnable")
 		this.state = stateLedTemporaryEnable
 		this.GpioControlLed.SetValue(1)
-//		this.timer.Start(time.Second*30, tmDisable, dispatcher.TimerSingle)
+		this.timer.Start(time.Minute*10, tmDisable, dispatcher.TimerSingle)
+	case evButtonOn:
+		this.timer.Start(time.Minute*10, tmDisable, dispatcher.TimerSingle)
 	case evButtonOff:
+		this.timer.Start(time.Second*30, tmDisable, dispatcher.TimerSingle)
+	case tmDisable:
 		this.onLedDisable(evEntry, nil)
-//	case tmDisable:
-//		this.onLedDisable(evEntry, nil)
 	}
 }

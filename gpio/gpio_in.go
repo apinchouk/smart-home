@@ -48,7 +48,7 @@ func (this *gpioInImplemented) init() bool {
 		fmt.Println("SetNonblock:", e)
 		os.Exit(1)
 	}
-
+	this.value=-1
 	this.fd = int(fd)
 	//this.ch = make(chan IChannelData, 256)
 	go detected(this)
@@ -69,9 +69,11 @@ func (this *gpioInImplemented) Value() int {
 }
 
 func (this *gpioInImplemented) setValue(value int) {
-	fmt.Printf("gpio value=%d\n", value)
-	this.value = value
-	this.dispatcher.SendEvent(this, value)
+	if (this.value != value) {
+		fmt.Printf("gpio value=%d\n", value)
+		this.value = value
+		this.dispatcher.SendEvent(this, value)
+	}
 }
 
 func detected(this *gpioInImplemented) {
