@@ -35,8 +35,8 @@ type SensorLed struct {
 }
 func isNight() bool {
 	t:=time.Now()
-	sunset,_:=time.Parse("15:04:05", "17:00:00")
-	sunrise,_:=time.Parse("15:04:05", "08:00:00")
+	sunset,_:=time.Parse("15:04:05", "16:00:00")
+	sunrise,_:=time.Parse("15:04:05", "09:00:00")
 	//fmt.Println("Time:", t.Format("15:04:05")) // Sunset: 18:14:27
 /*
 	p := sunrisesunset.Parameters{
@@ -55,8 +55,8 @@ func isNight() bool {
 	}
 	*/
 	fmt.Printf("Time:%v %v %v\n", t.Hour(),sunrise.Hour(),sunset.Hour())
-	if ((t.Hour()>=sunset.Hour() && t.Minute()>=sunset.Minute()) || 
-	(t.Hour()<=sunrise.Hour() && t.Minute()<=sunrise.Minute())) {
+	if (t.Hour()>sunset.Hour() || (t.Hour()==sunset.Hour() && t.Minute()>=sunset.Minute())) || 
+	(t.Hour()<sunrise.Hour() || (t.Hour()==sunrise.Hour() && t.Minute()<=sunrise.Minute())) {
 		fmt.Println("Night\n")
 		return true
 	} else {
